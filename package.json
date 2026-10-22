@@ -1,0 +1,31 @@
+{
+  "name": "cloudy-memory",
+  "version": "0.1.0",
+  "description": "Windows tray icon: a glass orb that clouds over at random moments until you click it clear.",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "frames": "node scripts/generate-frames.js",
+    "test": "node --test",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.example.cloudymemory",
+    "productName": "Cloudy Memory",
+    "files": [
+      "main.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.9.2",
+    "electron-builder": "^26.15.3",
+    "sharp": "^0.35.5"
+  }
+}
