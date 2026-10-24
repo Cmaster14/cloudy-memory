@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'">
+  <title>Custom Reminders</title>
+  <link rel="stylesheet" href="reminders.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Custom Reminders</h1>
+      <p class="lede">When the time comes, the orb fills with green smoke and hovering over it shows your note.</p>
+    </header>
+
+    <form id="new" novalidate>
+      <fieldset>
+        <legend>New reminder</legend>
+        <div class="when">
+          <label for="amount">Remind me in</label>
+          <div class="when-row">
+            <input id="amount" name="amount" type="number" inputmode="decimal" min="0" step="any" value="30" required>
+            <select id="unit" name="unit" aria-label="Unit">
+              <option value="minutes" selected>minutes</option>
+              <option value="hours">hours</option>
+              <option value="days">days</option>
+            </select>
+          </div>
+        </div>
+        <div class="note">
+          <label for="note">Note</label>
+          <input id="note" name="note" type="text" maxlength="200" placeholder="What shouldn't you forget?" autocomplete="off">
+        </div>
+        <div class="actions">
+          <p id="error" class="error" role="alert" hidden></p>
+          <button type="submit" class="primary">Set reminder</button>
+        </div>
+      </fieldset>
+    </form>
+
+    <section aria-labelledby="due-heading" id="due-section" hidden>
+      <h2 id="due-heading">Due now</h2>
+      <p class="hint">Click the orb in the tray to clear these.</p>
+      <ul id="due" class="list"></ul>
+    </section>
+
+    <section aria-labelledby="waiting-heading">
+      <h2 id="waiting-heading">Waiting</h2>
+      <ul id="waiting" class="list"></ul>
+      <p id="empty" class="empty" hidden>No reminders yet. Set one above and it will show up here.</p>
+    </section>
+  </main>
+  <script src="reminders.js"></script>
+</body>
+</html>

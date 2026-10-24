@@ -16,24 +16,32 @@ function createAnimator({ frameCount, frameMs, render, initial = 0, timers = glo
     }
   }
 
-  function play(sequence) {
+  // `onDone` runs once the sequence has played out (immediately if there is
+  // nothing to play). Starting another sequence or calling stop() cancels it.
+  function play(sequence, onDone) {
     stop();
     const queue = sequence.slice();
-    if (queue.length === 0) return;
+    if (queue.length === 0) {
+      if (onDone) onDone();
+      return;
+    }
     handle = timers.setInterval(() => {
       current = queue.shift();
       render(current);
-      if (queue.length === 0) stop();
+      if (queue.length === 0) {
+        stop();
+        if (onDone) onDone();
+      }
     }, frameMs);
   }
 
   /** Walks one frame per beat from wherever we are now to `target`. */
-  function to(target) {
+  function to(target, onDone) {
     const goal = Math.min(Math.max(target, 0), lastFrame);
     const step = goal >= current ? 1 : -1;
     const sequence = [];
     for (let i = current; i !== goal; i += step) sequence.push(i + step);
-    play(sequence);
+    play(sequence, onDone);
   }
 
   /** A small flicker for a click on an orb that is already clear and idle. */
