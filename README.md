@@ -10,7 +10,7 @@ Right-click the tray icon and choose **Custom Reminders** to set a reminder for 
 
 **Download Executable**
 
-[Cloudy Memory v1.0](https://github.com/Cmaster14/cloudy-memory/releases/download/v1.1/Cloudy.Memory.Setup.1.1.1.exe)
+[Cloudy Memory v1.1](https://github.com/Cmaster14/cloudy-memory/releases/download/v1.1/Cloudy.Memory.Setup.1.1.1.exe)
 
 ## License
 
