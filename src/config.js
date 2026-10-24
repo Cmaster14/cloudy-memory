@@ -22,12 +22,15 @@ module.exports = {
   text: {
     clearTooltip: 'Cloudy Memory',
     cloudyTooltip: 'You have forgotten something...',
+    // Shown for a custom reminder that was created without a note.
+    reminderFallback: 'Reminder',
   },
 
   notification: {
     enabled: true,
     title: 'Cloudy Memory',
     customTitle: 'Cloudy Memory - Custom Reminder',
+    customFallbackBody: 'A custom reminder is due.',
     body: 'You have seemingly forgotten something. Click the orb in the tray to clear it.',
   },
 };
