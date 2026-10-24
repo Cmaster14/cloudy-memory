@@ -27,6 +27,7 @@ module.exports = {
   notification: {
     enabled: true,
     title: 'Cloudy Memory',
-    body: 'The orb has clouded over. Click it in the tray to clear it.',
+    customTitle: 'Cloudy Memory - Custom Reminder',
+    body: 'You have seemingly forgotten something. Click the orb in the tray to clear it.',
   },
 };

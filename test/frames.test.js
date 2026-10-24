@@ -4,18 +4,21 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { levels, sizes } = require('../src/frames.config');
+const { levels, sizes, variants } = require('../src/frames.config');
 const { frameFile } = require('../src/icons');
 
 const dir = path.join(__dirname, '..', 'assets', 'frames');
 
-test('every smoke level exists at every size as a PNG of the right dimensions', () => {
-  for (let level = 0; level < levels; level++) {
-    for (const size of sizes) {
-      const buf = fs.readFileSync(frameFile(dir, level, size));
-      assert.equal(buf.subarray(1, 4).toString('latin1'), 'PNG', `L${level}-${size} is a PNG`);
-      assert.equal(buf.readUInt32BE(16), size, `L${level}-${size} width`);
-      assert.equal(buf.readUInt32BE(20), size, `L${level}-${size} height`);
+test('every smoke level exists at every size, for every variant, as a PNG of the right dimensions', () => {
+  for (const variant of Object.keys(variants)) {
+    for (let level = 0; level < levels; level++) {
+      for (const size of sizes) {
+        const buf = fs.readFileSync(frameFile(dir, level, size, variant));
+        const id = `${variant} L${level}-${size}`;
+        assert.equal(buf.subarray(1, 4).toString('latin1'), 'PNG', `${id} is a PNG`);
+        assert.equal(buf.readUInt32BE(16), size, `${id} width`);
+        assert.equal(buf.readUInt32BE(20), size, `${id} height`);
+      }
     }
   }
 });

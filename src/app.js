@@ -40,11 +40,14 @@ function createTrayApp({
   const tooltip = () =>
     orb.getPhase() === 'cloudy' ? config.text.cloudyTooltip : config.text.clearTooltip;
 
-  function notify() {
+  function notify(customNote) {
     if (!config.notification.enabled || !Notification.isSupported()) return;
+    let custom = customNote !== undefined;
+    let notificationTitle = custom ? config.notification.customTitle : config.notification.title;
+    let notificationBody = custom ? customNote : config.notification.body;
     new Notification({
-      title: config.notification.title,
-      body: config.notification.body,
+      title: notificationTitle,
+      body: notificationBody,
       silent: true,
     }).show();
   }
@@ -87,6 +90,15 @@ function createTrayApp({
         // Unpackaged runs would register electron.exe itself, which is wrong.
         enabled: app.isPackaged,
         click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }),
+      },
+      {
+        label: 'Custom Reminders',
+        enabled: true,
+        click: () => {
+          // Open a small window allowing you to view and create custom reminders for a certain amount of time with a note
+          // When the time has elapsed, fill the smoke orb (maybe with a different color to denote specific timer, possibly mixing colors if normal smoke should show)
+          // On hover over the orb, display the note (and the normal display message if that is supposed to show as well)
+        }
       },
       { type: 'separator' },
     ];

@@ -4,7 +4,7 @@
 
 Inspired by the Remembrall from Harry Potter: it sits in your system tray and, at some point in the next 30 minutes to 48 hours, the glass clouds over. That is your cue that you've forgotten something. Click the orb, the smoke drains away, and a fresh random timer begins. The wait is never longer than 48 hours.
 
-![Every smoke level of the orb, on dark and light taskbars, at 48 px and at the real 16 px tray size](docs/orb-preview.png)
+![Every smoke level of the orb, on dark and light taskbars, at 48 px and at the real 16 px tray size](assets/orb-L6-48.png)
 
 <sub>All nine smoke levels, drawn on dark and light taskbars, at 48 px (top two rows) and at the true 16 px tray size (bottom two rows, enlarged).</sub>
 
@@ -16,7 +16,7 @@ Inspired by the Remembrall from Harry Potter: it sits in your system tray and, a
 - **Sharp at any display scaling.** Frames ship at 16, 24, 32 and 48 px, so Windows picks the right size at 100%, 150%, 200% and 300% scaling.
 - **Quiet notification.** A silent Windows toast when the orb clouds over (optional).
 - **Tray-only.** No window, a single running instance, and a "Launch at login" checkbox in the tray menu for installed builds.
-- **Bring your own art.** The frames are plain PNGs; drop in your own and nothing else changes.
+- **Custom reminder creation.** Opens app window to allow user to set custom reminder timer with notes *IN DEVELOPMENT*
 
 ## Quick start
 
