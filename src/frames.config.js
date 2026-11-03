@@ -11,6 +11,10 @@ module.exports = {
   sizes: [16, 24, 32, 48],
   scales: { 16: 1, 24: 1.5, 32: 2, 48: 3 },
 
+  // Extra sizes for the macOS menu bar (about 18 pt tall: 18 px @1x, 36 px @2x).
+  // Only the macOS build uses these; the Windows build ignores them.
+  macSizes: [18, 36],
+
   // Placeholder art only.
   seed: 7,
   blobCount: 16,

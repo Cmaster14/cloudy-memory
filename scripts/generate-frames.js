@@ -11,7 +11,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
-const { levels, sizes, blobCount, seed, colors, smoke, variants } = require('../src/frames.config');
+const { levels, sizes, macSizes, blobCount, seed, colors, smoke, variants } = require('../src/frames.config');
+
+// `--mac` writes only the macOS menu bar sizes, leaving the Windows frames and
+// icon untouched. With no flag, everything is written.
+const macOnly = process.argv.includes('--mac');
+const sizesToWrite = macOnly ? macSizes : [...sizes, ...macSizes];
 
 const OUT_DIR = path.join(__dirname, '..', 'assets', 'frames');
 const ICON_FILE = path.join(__dirname, '..', 'assets', 'icon.png');
@@ -141,12 +146,16 @@ async function main() {
   for (const [name, variant] of Object.entries(variants)) {
     for (let level = 0; level < levels; level++) {
       const t = level / (levels - 1);
-      for (const size of sizes) {
+      for (const size of sizesToWrite) {
         await render(t, size, variant, path.join(OUT_DIR, `orb-${variant.prefix}L${level}-${size}.png`));
         count++;
       }
     }
     console.log(`  ${name}: done`);
+  }
+  if (macOnly) {
+    console.log(`Wrote ${count} macOS frames to ${OUT_DIR}`);
+    return;
   }
   // The installer icon is the clear orb, which looks the same in every variant.
   await render(0, 512, variants.purple, ICON_FILE);

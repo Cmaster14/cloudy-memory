@@ -7,8 +7,10 @@
   "scripts": {
     "start": "electron .",
     "frames": "node scripts/generate-frames.js",
+    "frames:mac": "node scripts/generate-frames.js --mac",
     "test": "node --test",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "dist:mac": "bash scripts/build-mac.sh"
   },
   "build": {
     "appId": "com.example.cloudymemory",
@@ -16,7 +18,9 @@
     "files": [
       "main.js",
       "src/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "!assets/frames/*-18.png",
+      "!assets/frames/*-36.png"
     ],
     "win": {
       "target": "nsis",
