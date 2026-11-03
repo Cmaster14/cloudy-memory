@@ -1,0 +1,118 @@
+{
+  "description": "Frame animator (src/animator.js). frameCount 9. 'tick' advances one beat and records any frame rendered. 'expectShown' compares and clears the frames rendered so far; 'expectDone' compares and resets the number of onDone callbacks; 'expectCurrent' checks the current frame.",
+  "frameCount": 9,
+  "scenarios": [
+    {
+      "name": "fills one frame per beat and reports done once",
+      "initial": 0,
+      "steps": [
+        { "op": "to", "target": 8, "withDone": true },
+        { "op": "tick", "count": 7 },
+        { "op": "expectDone", "count": 0 },
+        { "op": "tick", "count": 1 },
+        { "op": "expectShown", "frames": [1, 2, 3, 4, 5, 6, 7, 8] },
+        { "op": "expectDone", "count": 1 },
+        { "op": "expectCurrent", "frame": 8 },
+        { "op": "tick", "count": 3 },
+        { "op": "expectShown", "frames": [] }
+      ]
+    },
+    {
+      "name": "reverses from the current frame",
+      "initial": 0,
+      "steps": [
+        { "op": "to", "target": 8 },
+        { "op": "tick", "count": 3 },
+        { "op": "expectShown", "frames": [1, 2, 3] },
+        { "op": "to", "target": 0 },
+        { "op": "tick", "count": 3 },
+        { "op": "expectShown", "frames": [2, 1, 0] },
+        { "op": "expectCurrent", "frame": 0 }
+      ]
+    },
+    {
+      "name": "a click on a clear idle orb flickers up two frames and back",
+      "initial": 0,
+      "steps": [
+        { "op": "nudge" },
+        { "op": "tick", "count": 6 },
+        { "op": "expectShown", "frames": [1, 2, 1, 0] }
+      ]
+    },
+    {
+      "name": "a nudge is ignored while another animation is playing",
+      "initial": 0,
+      "steps": [
+        { "op": "to", "target": 8 },
+        { "op": "nudge" },
+        { "op": "tick", "count": 2 },
+        { "op": "expectShown", "frames": [1, 2] }
+      ]
+    },
+    {
+      "name": "a nudge is ignored when the orb is not at frame 0",
+      "initial": 8,
+      "steps": [
+        { "op": "nudge" },
+        { "op": "tick", "count": 4 },
+        { "op": "expectShown", "frames": [] }
+      ]
+    },
+    {
+      "name": "going to the frame it is already on finishes at once and renders nothing",
+      "initial": 0,
+      "steps": [
+        { "op": "to", "target": 0, "withDone": true },
+        { "op": "expectDone", "count": 1 },
+        { "op": "tick", "count": 3 },
+        { "op": "expectShown", "frames": [] }
+      ]
+    },
+    {
+      "name": "targets outside the range are clamped",
+      "initial": 0,
+      "steps": [
+        { "op": "to", "target": 99 },
+        { "op": "tick", "count": 10 },
+        { "op": "expectShown", "frames": [1, 2, 3, 4, 5, 6, 7, 8] },
+        { "op": "to", "target": -5 },
+        { "op": "tick", "count": 10 },
+        { "op": "expectShown", "frames": [7, 6, 5, 4, 3, 2, 1, 0] }
+      ]
+    },
+    {
+      "name": "starting a new sequence drops the old completion callback",
+      "initial": 0,
+      "steps": [
+        { "op": "to", "target": 8, "withDone": true },
+        { "op": "tick", "count": 2 },
+        { "op": "to", "target": 0, "withDone": true },
+        { "op": "tick", "count": 5 },
+        { "op": "expectShown", "frames": [1, 2, 1, 0] },
+        { "op": "expectDone", "count": 1 }
+      ]
+    },
+    {
+      "name": "stop() freezes the animation where it is",
+      "initial": 0,
+      "steps": [
+        { "op": "to", "target": 8, "withDone": true },
+        { "op": "tick", "count": 2 },
+        { "op": "stop" },
+        { "op": "tick", "count": 5 },
+        { "op": "expectShown", "frames": [1, 2] },
+        { "op": "expectDone", "count": 0 },
+        { "op": "expectCurrent", "frame": 2 }
+      ]
+    },
+    {
+      "name": "starting from a full orb, draining plays every frame down",
+      "initial": 8,
+      "steps": [
+        { "op": "to", "target": 0 },
+        { "op": "tick", "count": 8 },
+        { "op": "expectShown", "frames": [7, 6, 5, 4, 3, 2, 1, 0] }
+      ]
+    }
+  ]
+}

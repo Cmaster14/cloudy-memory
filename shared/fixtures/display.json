@@ -1,0 +1,42 @@
+{
+  "description": "Tray display and toast text (src/display.js). A note of the form {\"repeat\":\"z\",\"count\":200} is that character repeated. Lengths are UTF-16 code units (JS string length); the cases here are ASCII so any counting scheme agrees.",
+  "text": { "clearTooltip": "Cloudy Memory", "cloudyTooltip": "You have forgotten something..." },
+  "cases": [
+    { "name": "nothing cloudy: no set and the idle tooltip", "orbPhase": "clear", "notes": [], "expect": { "set": null, "tooltip": "Cloudy Memory" } },
+    { "name": "only the orb cloudy: purple with the original phrase", "orbPhase": "cloudy", "notes": [], "expect": { "set": "purple", "tooltip": "You have forgotten something..." } },
+    { "name": "only a reminder: green with its note", "orbPhase": "clear", "notes": ["buy milk"], "expect": { "set": "green", "tooltip": "buy milk" } },
+    { "name": "both: mixed, note first and the orb phrase on its own line", "orbPhase": "cloudy", "notes": ["buy milk"], "expect": { "set": "mixed", "tooltip": "buy milk\nYou have forgotten something..." } },
+    { "name": "several reminders are summarised", "orbPhase": "clear", "notes": ["a", "b", "c"], "expect": { "set": "green", "tooltip": "a (+2 more)" } },
+    { "name": "an empty note falls back to a generic label", "orbPhase": "clear", "notes": [""], "expect": { "set": "green", "tooltip": "Reminder" } },
+    {
+      "name": "long notes with no orb: tooltip fits exactly in 127 characters",
+      "orbPhase": "clear",
+      "notes": [{ "repeat": "z", "count": 200 }, { "repeat": "z", "count": 200 }],
+      "expect": { "set": "green", "tooltipLength": 127, "tooltipStartsWith": "zzzz", "tooltipEndsWith": "… (+1 more)" }
+    },
+    {
+      "name": "long notes with the orb cloudy: the orb phrase survives intact",
+      "orbPhase": "cloudy",
+      "notes": [{ "repeat": "z", "count": 200 }, { "repeat": "z", "count": 200 }],
+      "expect": { "set": "mixed", "tooltipLength": 127, "tooltipStartsWith": "zzzz", "tooltipEndsWith": "… (+1 more)\nYou have forgotten something..." }
+    },
+    {
+      "name": "truncating at a space does not leave a dangling space before the ellipsis",
+      "orbPhase": "cloudy",
+      "notes": [
+        { "concat": [{ "repeat": "a", "count": 83 }, " ", { "repeat": "b", "count": 50 }] },
+        "second",
+        "third"
+      ],
+      "expect": { "set": "mixed", "tooltipLength": 126, "tooltipContains": ["a… (+2 more)\nYou have forgotten something..."], "tooltipNotContains": [" …"] }
+    },
+    { "name": "a note shorter than the budget is left alone", "orbPhase": "clear", "notes": [{ "repeat": "q", "count": 30 }], "expect": { "set": "green", "tooltip": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" } }
+  ],
+  "toastNotification": { "customFallbackBody": "A custom reminder is due." },
+  "toastCases": [
+    { "name": "one reminder: its note", "notes": ["call mom"], "expect": "call mom" },
+    { "name": "one reminder without a note: the fallback body", "notes": [""], "expect": "A custom reminder is due." },
+    { "name": "several reminders: a count", "notes": ["a", "b"], "expect": "2 custom reminders are due." },
+    { "name": "five reminders: a count", "notes": ["a", "b", "c", "d", "e"], "expect": "5 custom reminders are due." }
+  ]
+}

@@ -1,0 +1,189 @@
+{
+  "description": "Custom reminders (src/reminders.js). Clock starts at startMs; ids are generated as id1, id2, ... across restarts. A delayMs of the string \"NaN\" / \"Infinity\" stands for that number; any other non-number is passed through as a wrong type. A note that is not a string (number, null) is a wrong type. A note of the form {\"repeat\":\"x\",\"count\":500} is that character repeated.",
+  "startMs": 1000000,
+  "scenarios": [
+    {
+      "name": "add stores a pending reminder with an absolute due time",
+      "steps": [
+        { "op": "add", "delayMs": 1800000, "note": "  call the dentist  ", "expect": { "note": "call the dentist", "dueInMs": 1800000, "fired": false } },
+        { "op": "state", "expect": { "pendingNotes": ["call the dentist"], "firedNotes": [] } }
+      ]
+    },
+    {
+      "name": "rejects non-positive and non-finite delays",
+      "steps": [
+        { "op": "add", "delayMs": 0, "note": "x", "expect": { "isNull": true } },
+        { "op": "add", "delayMs": -5, "note": "x", "expect": { "isNull": true } },
+        { "op": "add", "delayMs": "NaN", "note": "x", "expect": { "isNull": true } },
+        { "op": "add", "delayMs": "Infinity", "note": "x", "expect": { "isNull": true } },
+        { "op": "add", "delayMs": "30", "note": "x", "expect": { "isNull": true } },
+        { "op": "add", "delayMs": null, "note": "x", "expect": { "isNull": true } },
+        { "op": "state", "expect": { "allNotes": [] } }
+      ]
+    },
+    {
+      "name": "there is no cap: very long delays are accepted, absurd ones are refused",
+      "steps": [
+        { "op": "add", "delayMs": 315360000000, "note": "far away", "expect": { "isNull": false } },
+        { "op": "add", "delayMs": 1e300, "note": "absurd", "expect": { "isNull": true } }
+      ]
+    },
+    {
+      "name": "long notes are trimmed to 200 characters; empty and non-string notes become empty",
+      "steps": [
+        { "op": "add", "delayMs": 60000, "note": { "repeat": "x", "count": 500 }, "expect": { "noteLength": 200 } },
+        { "op": "add", "delayMs": 120000, "note": "   ", "expect": { "note": "" } },
+        { "op": "add", "delayMs": 180000, "note": 42, "expect": { "note": "" } }
+      ]
+    },
+    {
+      "name": "reminders are kept sorted by due time and several can be pending",
+      "steps": [
+        { "op": "add", "delayMs": 5400000, "note": "later" },
+        { "op": "add", "delayMs": 600000, "note": "soon" },
+        { "op": "add", "delayMs": 2700000, "note": "middle" },
+        { "op": "state", "expect": { "pendingNotes": ["soon", "middle", "later"] } }
+      ]
+    },
+    {
+      "name": "equal due times keep creation order",
+      "steps": [
+        { "op": "add", "delayMs": 600000, "note": "first" },
+        { "op": "add", "delayMs": 600000, "note": "second" },
+        { "op": "add", "delayMs": 600000, "note": "third" },
+        { "op": "state", "expect": { "pendingNotes": ["first", "second", "third"] } }
+      ]
+    },
+    {
+      "name": "check fires only reminders that are due, once each",
+      "steps": [
+        { "op": "add", "delayMs": 600000, "note": "a" },
+        { "op": "add", "delayMs": 1200000, "note": "b" },
+        { "op": "check", "expect": { "notes": [] } },
+        { "op": "advance", "ms": 600000 },
+        { "op": "check", "expect": { "notes": ["a"] } },
+        { "op": "check", "expect": { "notes": [] } },
+        { "op": "advance", "ms": 900000 },
+        { "op": "check", "expect": { "notes": ["b"] } },
+        { "op": "state", "expect": { "firedCount": 2, "pendingCount": 0 } }
+      ]
+    },
+    {
+      "name": "several reminders due at once are fired together",
+      "steps": [
+        { "op": "add", "delayMs": 300000, "note": "a" },
+        { "op": "add", "delayMs": 360000, "note": "b" },
+        { "op": "advance", "ms": 3600000 },
+        { "op": "check", "expect": { "notes": ["a", "b"] } }
+      ]
+    },
+    {
+      "name": "msUntilNext tracks the earliest pending reminder",
+      "steps": [
+        { "op": "expect", "expect": { "msUntilNext": null } },
+        { "op": "add", "delayMs": 1800000, "note": "a" },
+        { "op": "add", "delayMs": 600000, "note": "b" },
+        { "op": "expect", "expect": { "msUntilNext": 600000 } },
+        { "op": "advance", "ms": 240000 },
+        { "op": "expect", "expect": { "msUntilNext": 360000 } },
+        { "op": "advance", "ms": 600000 },
+        { "op": "expect", "expect": { "msUntilNext": 0 } },
+        { "op": "check" },
+        { "op": "expect", "expect": { "msUntilNext": 960000 } }
+      ]
+    },
+    {
+      "name": "cancel removes a pending or fired reminder",
+      "steps": [
+        { "op": "add", "delayMs": 300000, "note": "a", "as": "a" },
+        { "op": "add", "delayMs": 600000, "note": "b", "as": "b" },
+        { "op": "cancel", "ref": "a", "expect": { "result": true } },
+        { "op": "cancel", "id": "nope", "expect": { "result": false } },
+        { "op": "advance", "ms": 600000 },
+        { "op": "check" },
+        { "op": "cancel", "ref": "b", "expect": { "result": true } },
+        { "op": "state", "expect": { "allNotes": [] } }
+      ]
+    },
+    {
+      "name": "dismissFired clears fired reminders and leaves pending ones alone",
+      "steps": [
+        { "op": "add", "delayMs": 300000, "note": "due" },
+        { "op": "add", "delayMs": 7200000, "note": "not yet" },
+        { "op": "advance", "ms": 360000 },
+        { "op": "check" },
+        { "op": "dismissFired", "expect": { "result": 1 } },
+        { "op": "dismissFired", "expect": { "result": 0 } },
+        { "op": "state", "expect": { "allNotes": ["not yet"] } }
+      ]
+    },
+    {
+      "name": "reminders survive a restart",
+      "steps": [
+        { "op": "add", "delayMs": 1800000, "note": "persisted" },
+        { "op": "restart" },
+        { "op": "load", "expect": { "becameDueNotes": [] } },
+        { "op": "state", "expect": { "pendingNotes": ["persisted"], "savedVersion": 1 } }
+      ]
+    },
+    {
+      "name": "reminders that came due while the app was closed are fired on load",
+      "steps": [
+        { "op": "add", "delayMs": 600000, "note": "missed" },
+        { "op": "add", "delayMs": 30000000, "note": "future" },
+        { "op": "advance", "ms": 3600000 },
+        { "op": "restart" },
+        { "op": "load", "expect": { "becameDueNotes": ["missed"] } },
+        { "op": "state", "expect": { "firedNotes": ["missed"], "pendingNotes": ["future"] } }
+      ]
+    },
+    {
+      "name": "a fired reminder stays fired across restarts until it is dismissed",
+      "steps": [
+        { "op": "add", "delayMs": 60000, "note": "x" },
+        { "op": "advance", "ms": 120000 },
+        { "op": "check" },
+        { "op": "restart" },
+        { "op": "load" },
+        { "op": "state", "expect": { "firedCount": 1 } }
+      ]
+    },
+    { "name": "corrupt storage (null) starts empty", "stored": null, "steps": [{ "op": "load" }, { "op": "state", "expect": { "allNotes": [] } }] },
+    { "name": "corrupt storage (string) starts empty", "stored": "nonsense", "steps": [{ "op": "load" }, { "op": "state", "expect": { "allNotes": [] } }] },
+    { "name": "corrupt storage (number) starts empty", "stored": 42, "steps": [{ "op": "load" }, { "op": "state", "expect": { "allNotes": [] } }] },
+    { "name": "corrupt storage (empty object) starts empty", "stored": {}, "steps": [{ "op": "load" }, { "op": "state", "expect": { "allNotes": [] } }] },
+    { "name": "corrupt storage (reminders not a list) starts empty", "stored": { "reminders": "x" }, "steps": [{ "op": "load" }, { "op": "state", "expect": { "allNotes": [] } }] },
+    { "name": "corrupt storage (junk entries) starts empty", "stored": { "reminders": [null, 5, {}] }, "steps": [{ "op": "load" }, { "op": "state", "expect": { "allNotes": [] } }] },
+    {
+      "name": "hand-edited storage drops only the bad entries",
+      "stored": {
+        "reminders": [
+          { "id": "ok", "note": "keep me", "createdAt": 1, "dueAt": 9000000, "fired": false },
+          { "id": "ok", "note": "keep me", "createdAt": 1, "dueAt": 9000000, "fired": false },
+          { "id": "badtime", "note": "x", "dueAt": "soon" },
+          { "id": "nan", "note": "x", "dueAt": "NaN" },
+          { "id": "frac", "note": "x", "dueAt": 12.5 },
+          { "id": "neg", "note": "x", "dueAt": -1 },
+          { "id": "", "note": "x", "dueAt": 5000000 }
+        ]
+      },
+      "steps": [{ "op": "load" }, { "op": "state", "expect": { "allIds": ["ok"] } }]
+    },
+    {
+      "name": "sanitising repairs what it can: sort order, missing createdAt, long notes, fired flag",
+      "stored": {
+        "reminders": [
+          { "id": "b", "note": "  second  ", "createdAt": 5, "dueAt": 20000000, "fired": "yes" },
+          { "id": "a", "note": 7, "dueAt": 10000000, "fired": true }
+        ]
+      },
+      "steps": [
+        { "op": "load" },
+        { "op": "state", "expect": { "all": [
+          { "id": "a", "note": "", "createdAt": 10000000, "dueAt": 10000000, "fired": true },
+          { "id": "b", "note": "second", "createdAt": 5, "dueAt": 20000000, "fired": false }
+        ] } }
+      ]
+    }
+  ]
+}

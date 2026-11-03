@@ -1,0 +1,282 @@
+{
+  "description": "End-to-end tray flow: orb + reminders + animator + toasts, driven by a hand-cranked clock (the logic of src/app.js). Clock starts at startMs; frameMs is 220 and there are 9 frames (so a full fill or drain is 8 beats = 1760 ms). Frames are written 'set:index'; 'purple:1-8' expands to purple:1..purple:8 and 'purple:7-0' to purple:7..purple:0. Ops: advance (run timers), jump (move the clock without running timers, like a suspended PC), resume (power-resume or screen-unlock event), click, animate (advance 8 beats), resetShown, markChanged, add, cancel, debug (cloudNow | cloudIn10s | reminderIn10s), expect.",
+  "startMs": 1000000000,
+  "scenarios": [
+    {
+      "name": "starts on the clear frame",
+      "steps": [{ "op": "expect", "expect": { "shown": ["purple:0"], "tooltip": "Cloudy Memory" } }]
+    },
+    {
+      "name": "clouds over on schedule: every frame in order, one toast, cloudy tooltip",
+      "random": 0,
+      "steps": [
+        { "op": "advance", "ms": 1799999 },
+        { "op": "expect", "expect": { "shown": ["purple:0"] } },
+        { "op": "advance", "ms": 1 },
+        { "op": "animate" },
+        { "op": "expect", "expect": {
+          "shown": ["purple:0", "purple:1-8"],
+          "toasts": [{ "title": "Cloudy Memory", "body": "You have seemingly forgotten something. Click the orb in the tray to clear it." }],
+          "tooltip": "You have forgotten something..."
+        } }
+      ]
+    },
+    {
+      "name": "a click clears the smoke and a fresh wait begins before it clouds again",
+      "random": 0,
+      "steps": [
+        { "op": "advance", "ms": 1800000 },
+        { "op": "animate" },
+        { "op": "resetShown" },
+        { "op": "click" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["purple:7-0"], "tooltip": "Cloudy Memory" } },
+        { "op": "resetShown" },
+        { "op": "advance", "ms": 1798239 },
+        { "op": "expect", "expect": { "shown": [] } },
+        { "op": "advance", "ms": 1761 },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["purple:1-8"], "toastCount": 2 } }
+      ]
+    },
+    {
+      "name": "a click while clear just nudges the orb",
+      "random": 0,
+      "steps": [
+        { "op": "click" },
+        { "op": "advance", "ms": 880 },
+        { "op": "expect", "expect": { "shown": ["purple:0", "purple:1", "purple:2", "purple:1", "purple:0"], "orbPhase": "clear" } }
+      ]
+    },
+    {
+      "name": "a click mid-animation reverses from the current frame",
+      "random": 0,
+      "steps": [
+        { "op": "advance", "ms": 1800000 },
+        { "op": "advance", "ms": 660 },
+        { "op": "expect", "expect": { "shown": ["purple:0-3"] } },
+        { "op": "click" },
+        { "op": "advance", "ms": 660 },
+        { "op": "expect", "expect": { "shown": ["purple:0-3", "purple:2-0"] } }
+      ]
+    },
+    {
+      "name": "waking from sleep past the deadline clouds over without waiting for a timer",
+      "random": 0,
+      "steps": [
+        { "op": "jump", "ms": 7200000 },
+        { "op": "expect", "expect": { "shown": ["purple:0"] } },
+        { "op": "resume" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["purple:0", "purple:1-8"], "toastCount": 1 } }
+      ]
+    },
+    {
+      "name": "launching with a saved cloudy state shows it at once, silently",
+      "stored": { "version": 1, "phase": "cloudy", "cloudyAt": null },
+      "steps": [
+        { "op": "expect", "expect": { "shown": ["purple:8"], "tooltip": "You have forgotten something..." } },
+        { "op": "advance", "ms": 3600000 },
+        { "op": "expect", "expect": { "shown": ["purple:8"], "toastCount": 0 } }
+      ]
+    },
+    {
+      "name": "a deadline that passed while the app was closed launches already cloudy, no toast",
+      "stored": { "version": 1, "phase": "clear", "cloudyAt": 999940000 },
+      "steps": [{ "op": "expect", "expect": { "shown": ["purple:8"], "toastCount": 0 } }]
+    },
+    {
+      "name": "debug actions cloud the orb on demand and reset the wait",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "debug", "name": "cloudNow" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["purple:0", "purple:1-8"] } },
+        { "op": "resetShown" },
+        { "op": "debug", "name": "cloudIn10s" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["purple:7-0"] } },
+        { "op": "resetShown" },
+        { "op": "advance", "ms": 10000 },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["purple:1-8"] } }
+      ]
+    },
+    {
+      "name": "a due custom reminder fills the orb with green smoke, shows its note and sends a toast",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "add", "delayMs": 1800000, "note": "water the plants" },
+        { "op": "advance", "ms": 1799999 },
+        { "op": "expect", "expect": { "shown": ["purple:0"] } },
+        { "op": "advance", "ms": 1 },
+        { "op": "animate" },
+        { "op": "expect", "expect": {
+          "shown": ["purple:0", "green:1-8"],
+          "tooltip": "water the plants",
+          "toasts": [{ "title": "Cloudy Memory - Custom Reminder", "body": "water the plants" }]
+        } }
+      ]
+    },
+    {
+      "name": "a click clears the green smoke and leaves still-pending reminders alone",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "add", "delayMs": 600000, "note": "soon" },
+        { "op": "add", "delayMs": 7200000, "note": "later" },
+        { "op": "advance", "ms": 600000 },
+        { "op": "animate" },
+        { "op": "resetShown" },
+        { "op": "click" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["green:7-0"], "tooltip": "Cloudy Memory", "pendingNotes": ["later"], "firedCount": 0 } }
+      ]
+    },
+    {
+      "name": "a reminder arriving while the purple cloud shows: purple drains first, then mixed fills",
+      "random": 0,
+      "steps": [
+        { "op": "add", "delayMs": 2400000, "note": "call mom" },
+        { "op": "advance", "ms": 1800000 },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "lastShown": "purple:8" } },
+        { "op": "resetShown" },
+        { "op": "advance", "ms": 600000 },
+        { "op": "animate" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["purple:7-0", "mixed:1-8"], "tooltip": "call mom\nYou have forgotten something..." } }
+      ]
+    },
+    {
+      "name": "the orb clouding while a reminder shows: green drains first, then mixed fills",
+      "random": 0,
+      "steps": [
+        { "op": "add", "delayMs": 600000, "note": "stretch" },
+        { "op": "advance", "ms": 600000 },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "lastShown": "green:8" } },
+        { "op": "resetShown" },
+        { "op": "advance", "ms": 1200000 },
+        { "op": "animate" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["green:7-0", "mixed:1-8"] } }
+      ]
+    },
+    {
+      "name": "clearing the mixed cloud clears both and the orb starts a new wait",
+      "random": 0,
+      "steps": [
+        { "op": "add", "delayMs": 60000, "note": "both" },
+        { "op": "advance", "ms": 1800000 },
+        { "op": "animate" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "lastShown": "mixed:8" } },
+        { "op": "resetShown" },
+        { "op": "click" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["mixed:7-0"], "orbPhase": "clear", "firedCount": 0 } }
+      ]
+    },
+    {
+      "name": "a reminder that lands mid-purple-fill redirects the animation from the current frame",
+      "random": 0,
+      "steps": [
+        { "op": "add", "delayMs": 1800660, "note": "mid" },
+        { "op": "advance", "ms": 1800000 },
+        { "op": "advance", "ms": 660 },
+        { "op": "expect", "expect": { "shown": ["purple:0-3"] } },
+        { "op": "resetShown" },
+        { "op": "advance", "ms": 60000 },
+        { "op": "expect", "expect": { "shown": ["purple:2-0", "mixed:1-8"] } }
+      ]
+    },
+    {
+      "name": "cancelling a due reminder drains its smoke; cancelling a pending one touches nothing",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "add", "delayMs": 30000000, "note": "pending", "as": "pending" },
+        { "op": "add", "delayMs": 300000, "note": "due", "as": "due" },
+        { "op": "advance", "ms": 300000 },
+        { "op": "animate" },
+        { "op": "resetShown" },
+        { "op": "cancel", "ref": "pending", "expect": { "result": true } },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": [] } },
+        { "op": "cancel", "ref": "due", "expect": { "result": true } },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "shown": ["green:7-0"], "tooltip": "Cloudy Memory" } },
+        { "op": "cancel", "id": "missing", "expect": { "result": false } }
+      ]
+    },
+    {
+      "name": "several reminders due together share one toast and one summarised tooltip",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "add", "delayMs": 300000, "note": "a" },
+        { "op": "add", "delayMs": 360000, "note": "b" },
+        { "op": "jump", "ms": 360000 },
+        { "op": "resume" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "toastCount": 1, "toasts": [{ "title": "Cloudy Memory - Custom Reminder", "body": "2 custom reminders are due." }], "tooltip": "a (+1 more)" } }
+      ]
+    },
+    {
+      "name": "a reminder added while another is pending is picked up by the wake-up timer",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "add", "delayMs": 3600000, "note": "far" },
+        { "op": "add", "delayMs": 120000, "note": "near" },
+        { "op": "advance", "ms": 120000 },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "lastShown": "green:8", "tooltip": "near" } }
+      ]
+    },
+    {
+      "name": "sleeping past a reminder: it shows on wake with a toast",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "add", "delayMs": 600000, "note": "slept through" },
+        { "op": "jump", "ms": 3600000 },
+        { "op": "resume" },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "lastShown": "green:8", "toastCount": 1 } }
+      ]
+    },
+    {
+      "name": "launching with a reminder that came due while closed shows green at once, silently",
+      "random": 0.999999999,
+      "remindersStored": { "version": 1, "reminders": [{ "id": "r1", "note": "missed", "createdAt": 999880000, "dueAt": 999940000, "fired": false }] },
+      "steps": [{ "op": "expect", "expect": { "shown": ["green:8"], "tooltip": "missed", "toastCount": 0 } }]
+    },
+    {
+      "name": "launching with the orb cloudy and a reminder due shows mixed at once",
+      "random": 0.999999999,
+      "stored": { "version": 1, "phase": "cloudy", "cloudyAt": null },
+      "remindersStored": { "version": 1, "reminders": [{ "id": "r1", "note": "x", "createdAt": 1, "dueAt": 999940000, "fired": false }] },
+      "steps": [{ "op": "expect", "expect": { "shown": ["mixed:8"], "toastCount": 0 } }]
+    },
+    {
+      "name": "adding and cancelling tell the window to refresh; invalid delays are refused",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "markChanged" },
+        { "op": "add", "delayMs": 0, "note": "nope", "expect": { "isNull": true } },
+        { "op": "expect", "expect": { "changedSinceMark": 0 } },
+        { "op": "add", "delayMs": 60000, "note": "ok", "as": "r" },
+        { "op": "expect", "expect": { "changedSinceMark": 1 } },
+        { "op": "cancel", "ref": "r", "expect": { "result": true } },
+        { "op": "expect", "expect": { "changedSinceMark": 2 } }
+      ]
+    },
+    {
+      "name": "the debug action can create a reminder due in 10 s",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "debug", "name": "reminderIn10s" },
+        { "op": "advance", "ms": 10000 },
+        { "op": "animate" },
+        { "op": "expect", "expect": { "lastShown": "green:8", "tooltip": "Debug reminder" } }
+      ]
+    }
+  ]
+}

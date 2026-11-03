@@ -1,0 +1,25 @@
+{
+  "description": "Turning the reminder form's amount and unit into a delay (src/ipc.js parseDelay). amount may be a number, a numeric string, or any junk; a missing key means undefined. Expect is either {delayMs} or {error}.",
+  "cases": [
+    { "name": "30 minutes", "amount": 30, "unit": "minutes", "expect": { "delayMs": 1800000 } },
+    { "name": "numeric string, hours", "amount": "2", "unit": "hours", "expect": { "delayMs": 7200000 } },
+    { "name": "fractional days", "amount": 1.5, "unit": "days", "expect": { "delayMs": 129600000 } },
+    { "name": "rounds to a whole millisecond", "amount": 0.0000001, "unit": "minutes", "expect": { "delayMs": 0 } },
+    { "name": "zero amount", "amount": 0, "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "negative amount", "amount": -1, "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "NaN string", "amount": "NaN", "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "Infinity string", "amount": "Infinity", "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "empty string", "amount": "", "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "blank string", "amount": "  ", "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "text", "amount": "abc", "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "null", "amount": null, "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "object", "amount": {}, "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "missing amount", "unit": "minutes", "expect": { "error": "Enter an amount greater than zero." } },
+    { "name": "unknown unit: weeks", "amount": 5, "unit": "weeks", "expect": { "error": "Choose minutes, hours or days." } },
+    { "name": "empty unit", "amount": 5, "unit": "", "expect": { "error": "Choose minutes, hours or days." } },
+    { "name": "missing unit", "amount": 5, "expect": { "error": "Choose minutes, hours or days." } },
+    { "name": "unit 'constructor'", "amount": 5, "unit": "constructor", "expect": { "error": "Choose minutes, hours or days." } },
+    { "name": "unit '__proto__'", "amount": 5, "unit": "__proto__", "expect": { "error": "Choose minutes, hours or days." } },
+    { "name": "both bad: the amount is reported first", "amount": 0, "unit": "weeks", "expect": { "error": "Enter an amount greater than zero." } }
+  ]
+}

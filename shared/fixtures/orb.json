@@ -1,0 +1,123 @@
+{
+  "description": "Orb state machine (src/state.js). Clock starts at startMs. Default config: minMs 1800000 (30 min), maxMs 172800000 (48 h), random 0.5.",
+  "startMs": 1000000000,
+  "scenarios": [
+    {
+      "name": "fresh start: clear, saved deadline inside the allowed range",
+      "random": 0.5,
+      "steps": [
+        { "op": "load", "expect": { "phase": "clear", "becameCloudyWhileAway": false, "waitMs": 87300000, "saved": { "version": 1, "phase": "clear", "cloudyAt": 1087300000 } } }
+      ]
+    },
+    {
+      "name": "the wait is never longer than 48 hours, even if the config asks for more",
+      "config": { "maxMs": 1800000000 },
+      "random": 0,
+      "steps": [
+        { "op": "load", "expect": { "waitMsAtMost": 172800000 } },
+        { "op": "setRandom", "value": 0.25 }, { "op": "reset" }, { "op": "load", "expect": { "waitMsAtMost": 172800000 } },
+        { "op": "setRandom", "value": 0.5 }, { "op": "reset" }, { "op": "load", "expect": { "waitMsAtMost": 172800000 } },
+        { "op": "setRandom", "value": 0.75 }, { "op": "reset" }, { "op": "load", "expect": { "waitMsAtMost": 172800000 } },
+        { "op": "setRandom", "value": 0.999999999 }, { "op": "reset" }, { "op": "load", "expect": { "waitMs": 172800000 } }
+      ]
+    },
+    {
+      "name": "the shortest pick hits the lower bound",
+      "random": 0,
+      "steps": [{ "op": "load", "expect": { "waitMs": 1800000 } }]
+    },
+    {
+      "name": "the longest pick hits the upper bound",
+      "random": 0.999999999,
+      "steps": [{ "op": "load", "expect": { "waitMs": 172800000 } }]
+    },
+    {
+      "name": "check() turns the orb cloudy once, exactly when the deadline passes",
+      "random": 0,
+      "steps": [
+        { "op": "load", "expect": { "waitMs": 1800000 } },
+        { "op": "advance", "ms": 1799999 },
+        { "op": "check", "expect": { "result": false, "phase": "clear" } },
+        { "op": "advance", "ms": 1 },
+        { "op": "check", "expect": { "result": true, "phase": "cloudy", "saved": { "version": 1, "phase": "cloudy", "cloudyAt": null } } },
+        { "op": "check", "expect": { "result": false } },
+        { "op": "expect", "expect": { "msUntilCloudy": null } }
+      ]
+    },
+    {
+      "name": "clicking a cloudy orb clears it and starts a new random wait",
+      "random": 0,
+      "steps": [
+        { "op": "load", "expect": { "saved": { "version": 1, "phase": "clear", "cloudyAt": 1001800000 } } },
+        { "op": "advance", "ms": 19800000 },
+        { "op": "check", "expect": { "result": true } },
+        { "op": "setRandom", "value": 0.5 },
+        { "op": "clear", "expect": { "result": true, "phase": "clear", "waitMs": 87300000, "saved": { "version": 1, "phase": "clear", "cloudyAt": 1107100000 } } }
+      ]
+    },
+    {
+      "name": "clicking an orb that is already clear changes nothing",
+      "random": 0.5,
+      "steps": [
+        { "op": "load" },
+        { "op": "clear", "expect": { "result": false, "phase": "clear", "waitMs": 87300000, "saved": { "version": 1, "phase": "clear", "cloudyAt": 1087300000 } } }
+      ]
+    },
+    {
+      "name": "a restart keeps the same deadline",
+      "random": 0.5,
+      "steps": [
+        { "op": "load" },
+        { "op": "advance", "ms": 3600000 },
+        { "op": "restart" },
+        { "op": "load", "expect": { "phase": "clear", "waitMs": 83700000, "becameCloudyWhileAway": false } }
+      ]
+    },
+    {
+      "name": "a deadline that passed while the app was closed loads as cloudy",
+      "random": 0,
+      "steps": [
+        { "op": "load" },
+        { "op": "advance", "ms": 12600000 },
+        { "op": "restart" },
+        { "op": "load", "expect": { "phase": "cloudy", "becameCloudyWhileAway": true } }
+      ]
+    },
+    {
+      "name": "a cloudy orb stays cloudy across restarts until clicked",
+      "stored": { "version": 1, "phase": "cloudy", "cloudyAt": null },
+      "steps": [
+        { "op": "load", "expect": { "phase": "cloudy", "becameCloudyWhileAway": false } }
+      ]
+    },
+    {
+      "name": "a saved deadline more than 48 h away is pulled in to 48 h",
+      "stored": { "version": 1, "phase": "clear", "cloudyAt": 1360000000 },
+      "steps": [{ "op": "load", "expect": { "waitMs": 172800000 } }]
+    },
+    {
+      "name": "if the clock moves backwards, the wait is still capped at 48 h",
+      "random": 0.999999999,
+      "steps": [
+        { "op": "load" },
+        { "op": "advance", "ms": -720000000 },
+        { "op": "check", "expect": { "result": false } },
+        { "op": "expect", "expect": { "msUntilCloudyAtMost": 172800000 } }
+      ]
+    },
+    { "name": "junk saved state (null) starts a fresh timer", "stored": null, "random": 0.5, "steps": [{ "op": "load", "expect": { "phase": "clear", "waitMs": 87300000 } }] },
+    { "name": "junk saved state (string) starts a fresh timer", "stored": "nonsense", "random": 0.5, "steps": [{ "op": "load", "expect": { "phase": "clear", "waitMs": 87300000 } }] },
+    { "name": "junk saved state (unknown phase) starts a fresh timer", "stored": { "phase": "banana" }, "random": 0.5, "steps": [{ "op": "load", "expect": { "phase": "clear", "waitMs": 87300000 } }] },
+    { "name": "junk saved state (non-numeric deadline) starts a fresh timer", "stored": { "phase": "clear", "cloudyAt": "soon" }, "random": 0.5, "steps": [{ "op": "load", "expect": { "phase": "clear", "waitMs": 87300000 } }] },
+    {
+      "name": "debug helpers respect the 48 h cap",
+      "random": 0.5,
+      "steps": [
+        { "op": "load" },
+        { "op": "setNextIn", "ms": 3600000000, "expect": { "waitMs": 172800000 } },
+        { "op": "forceCloudy", "expect": { "result": true, "phase": "cloudy" } },
+        { "op": "forceCloudy", "expect": { "result": false } }
+      ]
+    }
+  ]
+}
