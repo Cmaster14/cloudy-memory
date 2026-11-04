@@ -5,14 +5,21 @@ A native Swift menu bar app. The Windows (Electron) app in the repository root i
 ```
 macos/
   Package.swift
-  Sources/CloudyMemoryCore/   pure logic, no AppKit (shared with a future iOS app)
-  Sources/CloudyMemory/       the menu bar shell: NSStatusItem, notifications, SwiftUI reminders window
-  Tests/CloudyMemoryCoreTests/  XCTest, including the shared fixtures in ../shared/fixtures
+  Sources/CloudyMemoryCore/   pure logic, no UI (shared with a future iOS app)
+  Sources/CloudyMemoryUI/     SwiftUI views (reminders window, menu) and icon loading, with #Previews
+  Sources/CloudyMemory/       the app: SwiftUI App + MenuBarExtra, the model that drives it, notifications
+  Tests/                      XCTest: the shared fixtures, plus icon-asset checks
   Resources/Info.plist        bundle template (LSUIElement: no Dock icon)
   VERSION                     release version used by scripts/build-mac.sh
 ```
 
 Requires macOS 13+ and Xcode 15+ (or the Command Line Tools).
+
+## Xcode
+
+Open the `macos/` folder (or `macos/Package.swift`) in Xcode; no `.xcodeproj` is needed.
+
+**Previews.** The views live in the `CloudyMemoryUI` library so previews work. Open `RemindersView.swift`, `MenuContent.swift` or `OrbFramesGallery.swift` and show the canvas (Option-Command-Return). The views are stateless (plain values and closures), so each preview feeds them sample data: an empty list, pending and due reminders, a validation error, a long note in dark mode, the menu with and without smoke, and every orb frame of every colour. If a preview does not load, try Product > Clean Build Folder, and check that the scheme is `CloudyMemoryUI` or `CloudyMemory`.
 
 ## Develop
 
@@ -25,11 +32,20 @@ swift run --package-path macos CloudyMemory --debug
 
 ## How it differs from Windows
 
-- The status item's menu opens on **any** click. **Clear Reminders** clears the orb and every due reminder, and is enabled only while something is showing.
-- Icons are 18 px (@1x) and 36 px (@2x) full-colour PNGs, not "template" images (templates are tinted monochrome and would lose the purple and green smoke).
+- The menu bar item is a SwiftUI `MenuBarExtra` in `.menu` style, so it is a native macOS menu that opens on **any** click. **Clear Reminders** clears the orb and every due reminder, and is enabled only while something is showing.
+- Icons are 18 px (@1x) and 36 px (@2x) full-colour PNGs, not "template" images (templates are tinted monochrome and would lose the purple and green smoke). The icon animation works by publishing the current frame, which makes the `MenuBarExtra` label redraw.
 - State is stored in `~/Library/Application Support/Cloudy Memory/` using the same JSON schema as the Windows build.
 - Launch at Login uses `SMAppService` and only works from an installed `.app`.
 - Wake and screen-unlock events re-check the timers, like Windows resume and unlock.
+
+## Things to check first (written without a Mac to run them on)
+
+These rely on behaviour I could not verify, so test them first:
+
+1. **The hover tooltip.** `MenuBarExtra` has no tooltip API. The label uses `.help(...)`, and `StatusItemTooltip.swift` also sets `toolTip` on the status bar button directly (it finds the button inside the status bar window). If hovering the icon shows nothing, that file is where to look; if `.help` alone works, delete the file.
+2. **The animated icon.** Every animation frame updates the `MenuBarExtra` label image. Check the smoke fills and drains smoothly, and that the colours are not tinted.
+3. **The reminders window** is a SwiftUI view hosted in an `NSWindow` (see `RemindersWindow.swift` for why not a `Window` scene). Check that it comes to the front when opened from the menu.
+4. **Notifications and Launch at Login** only work from the packaged app, not from Xcode or `swift run`.
 
 ## Build a DMG
 

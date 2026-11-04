@@ -1,49 +1,29 @@
 import AppKit
 import CloudyMemoryCore
 
-/// Draws the orb in the menu bar. The status item's menu opens on any click
-/// (left or right), which is what NSStatusItem does when `menu` is set.
-final class StatusItemPresenter: NSObject, TrayPresenter {
+/// Loads the menu bar orb frames (assets/frames/orb-[set-]L<level>-<18|36>.png).
+public enum OrbIcons {
     /// Menu bar icons are about 18 pt; the PNGs are 18 px (@1x) and 36 px (@2x).
-    private static let iconPoints = NSSize(width: 18, height: 18)
-    private static let pixelSizes = [18, 36]
+    public static let iconPoints = NSSize(width: 18, height: 18)
+    public static let pixelSizes = [18, 36]
 
-    private let statusItem: NSStatusItem
-    private let notifier = Notifier()
-    private var frames: [SmokeSet: [NSImage]] = [:]
-
-    init(menu: NSMenu, levels: Int) {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        super.init()
-        for set in SmokeSet.allCases {
-            frames[set] = StatusItemPresenter.loadFrames(set: set, levels: levels)
+    /// The app bundle's `frames` folder, or the repository's `assets/frames`
+    /// when running from a source checkout (Xcode, `swift run`, previews).
+    public static var defaultDirectory: URL {
+        if let bundled = Bundle.main.resourceURL?.appendingPathComponent("frames", isDirectory: true),
+           FileManager.default.fileExists(atPath: bundled.path) {
+            return bundled
         }
-        statusItem.menu = menu
-        statusItem.button?.imagePosition = .imageOnly
+        return URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent() // CloudyMemoryUI
+            .deletingLastPathComponent() // Sources
+            .deletingLastPathComponent() // macos
+            .deletingLastPathComponent() // repository root
+            .appendingPathComponent("assets")
+            .appendingPathComponent("frames")
     }
 
-    func requestNotificationPermission() {
-        notifier.requestPermission()
-    }
-
-    // MARK: TrayPresenter
-
-    func show(set: SmokeSet, frame: Int) {
-        guard let images = frames[set], images.indices.contains(frame) else { return }
-        statusItem.button?.image = images[frame]
-    }
-
-    func setTooltip(_ text: String) {
-        statusItem.button?.toolTip = text
-    }
-
-    func notify(title: String, body: String) {
-        notifier.post(title: title, body: body)
-    }
-
-    // MARK: Icon loading
-
-    private static func prefix(for set: SmokeSet) -> String {
+    public static func filePrefix(for set: SmokeSet) -> String {
         switch set {
         case .purple: return ""
         case .green: return "green-"
@@ -54,28 +34,30 @@ final class StatusItemPresenter: NSObject, TrayPresenter {
     /// One NSImage per smoke level with an @1x and an @2x bitmap. These are
     /// full-colour images, deliberately not "template" images: template images
     /// are tinted monochrome, which would erase the purple and green smoke.
-    private static func loadFrames(set: SmokeSet, levels: Int) -> [NSImage] {
-        let directory = AppPaths.framesDirectory
-        let filePrefix = prefix(for: set)
+    public static func frames(
+        for set: SmokeSet,
+        levels: Int,
+        directory: URL = OrbIcons.defaultDirectory
+    ) -> [NSImage] {
+        let prefix = filePrefix(for: set)
         return (0..<levels).map { (level: Int) -> NSImage in
             let image = NSImage(size: iconPoints)
             for px in pixelSizes {
-                let url = directory.appendingPathComponent("orb-\(filePrefix)L\(level)-\(px).png")
+                let url = directory.appendingPathComponent("orb-\(prefix)L\(level)-\(px).png")
                 guard let data = try? Data(contentsOf: url), let rep = NSBitmapImageRep(data: data) else { continue }
                 rep.size = iconPoints // 36 px at 18 pt is the @2x representation
                 image.addRepresentation(rep)
             }
             image.isTemplate = false
             if image.representations.isEmpty {
-                NSLog("[icons] missing frames in %@, drawing a placeholder", directory.path)
                 return placeholder(set: set, level: level, levels: levels)
             }
             return image
         }
     }
 
-    /// Only used if the PNGs are missing, so the app is never invisible.
-    private static func placeholder(set: SmokeSet, level: Int, levels: Int) -> NSImage {
+    /// Only used if the PNGs are missing, so the menu bar item is never invisible.
+    static func placeholder(set: SmokeSet, level: Int, levels: Int) -> NSImage {
         let amount = CGFloat(level) / CGFloat(max(1, levels - 1))
         return NSImage(size: iconPoints, flipped: false) { rect in
             let orb = NSBezierPath(ovalIn: rect.insetBy(dx: 1.5, dy: 1.5))

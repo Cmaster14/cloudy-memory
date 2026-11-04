@@ -3,15 +3,37 @@ import CloudyMemoryCore
 
 /// The Custom Reminders window: a form to add a reminder, then "Due now" and
 /// "Waiting" lists. Notes are only ever shown as plain text.
-struct RemindersView: View {
-    @ObservedObject var model: RemindersModel
+///
+/// This view is stateless on purpose: it receives plain values and closures, so
+/// it can be previewed with sample data and has no dependency on the app model.
+public struct RemindersView: View {
+    public var pending: [Reminder]
+    public var fired: [Reminder]
+    /// Called with the amount text, unit and note. Returns an error message to
+    /// show, or nil when the reminder was added.
+    public var onAdd: (String, ReminderUnit, String) -> String?
+    public var onCancel: (Reminder) -> Void
 
     @State private var amount = "30"
     @State private var unit: ReminderUnit = .minutes
     @State private var note = ""
     @State private var errorMessage: String?
 
-    var body: some View {
+    public init(
+        pending: [Reminder],
+        fired: [Reminder],
+        initialError: String? = nil,
+        onAdd: @escaping (String, ReminderUnit, String) -> String?,
+        onCancel: @escaping (Reminder) -> Void
+    ) {
+        self.pending = pending
+        self.fired = fired
+        self.onAdd = onAdd
+        self.onCancel = onCancel
+        _errorMessage = State(initialValue: initialError)
+    }
+
+    public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -23,6 +45,7 @@ struct RemindersView: View {
 
                 form
 
+                // Keeps "in 25 minutes" honest while the window stays open.
                 TimelineView(.periodic(from: .now, by: 15)) { context in
                     lists(now: context.date)
                 }
@@ -45,8 +68,8 @@ struct RemindersView: View {
                         .onSubmit(submit)
                         .onChange(of: amount) { _ in errorMessage = nil }
                     Picker("Unit", selection: $unit) {
-                        ForEach(ReminderUnit.allCases, id: \.self) { unit in
-                            Text(unit.rawValue).tag(unit)
+                        ForEach(ReminderUnit.allCases, id: \.self) { option in
+                            Text(option.rawValue).tag(option)
                         }
                     }
                     .labelsHidden()
@@ -55,7 +78,7 @@ struct RemindersView: View {
                 TextField("What shouldn't you forget?", text: $note)
                     .onSubmit(submit)
                     .onChange(of: note) { newValue in
-                        // The model trims too; this just stops the field growing past the limit.
+                        // The core trims too; this just stops the field growing past the limit.
                         if newValue.utf16.count > Reminders.maxNoteLength {
                             note = String(newValue.prefix(Reminders.maxNoteLength))
                         }
@@ -74,7 +97,7 @@ struct RemindersView: View {
     }
 
     private func submit() {
-        if let message = model.add(amount: amount, unit: unit, note: note) {
+        if let message = onAdd(amount, unit, note) {
             errorMessage = message
         } else {
             errorMessage = nil
@@ -86,26 +109,26 @@ struct RemindersView: View {
 
     @ViewBuilder
     private func lists(now: Date) -> some View {
-        if !model.fired.isEmpty {
+        if !fired.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Due now").font(.headline)
                 Text("Choose Clear Reminders from the menu bar icon to clear these.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                ForEach(model.fired, id: \.id) { reminder in
+                ForEach(fired, id: \.id) { reminder in
                     row(reminder, isDue: true, now: now)
                 }
             }
         }
 
         VStack(alignment: .leading, spacing: 8) {
-            if !model.pending.isEmpty {
+            if !pending.isEmpty {
                 Text("Waiting").font(.headline)
             }
-            ForEach(model.pending, id: \.id) { reminder in
+            ForEach(pending, id: \.id) { reminder in
                 row(reminder, isDue: false, now: now)
             }
-            if model.pending.isEmpty && model.fired.isEmpty {
+            if pending.isEmpty && fired.isEmpty {
                 Text("No reminders yet. Set one above and it will show up here.")
                     .foregroundStyle(.secondary)
             }
@@ -125,7 +148,7 @@ struct RemindersView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button(isDue ? "Dismiss" : "Cancel") { model.cancel(reminder) }
+            Button(isDue ? "Dismiss" : "Cancel") { onCancel(reminder) }
         }
         .padding(10)
         .background(
@@ -153,3 +176,57 @@ struct RemindersView: View {
         return "\(day) at \(time)"
     }
 }
+
+// MARK: - Previews (Xcode: open this file and show the canvas, Option-Command-Return)
+
+#if DEBUG
+private enum SampleReminders {
+    static func make(_ note: String, in minutes: Double, fired: Bool = false) -> Reminder {
+        let due = Millis((Date().timeIntervalSince1970 + minutes * 60) * 1000)
+        return Reminder(id: UUID().uuidString, note: note, createdAt: due - 1_800_000, dueAt: due, fired: fired)
+    }
+}
+
+#Preview("Empty") {
+    RemindersView(pending: [], fired: [], onAdd: { _, _, _ in nil }, onCancel: { _ in })
+        .frame(width: 440, height: 520)
+}
+
+#Preview("Pending and due") {
+    RemindersView(
+        pending: [
+            SampleReminders.make("Call the dentist", in: 25),
+            SampleReminders.make("Water the plants", in: 60 * 5 + 5),
+            SampleReminders.make("", in: 60 * 24 * 3),
+        ],
+        fired: [
+            SampleReminders.make("Take the bread out of the oven", in: -4, fired: true),
+        ],
+        onAdd: { _, _, _ in nil },
+        onCancel: { _ in }
+    )
+    .frame(width: 440, height: 560)
+}
+
+#Preview("Validation error") {
+    RemindersView(
+        pending: [],
+        fired: [],
+        initialError: DelayParser.amountError,
+        onAdd: { _, _, _ in DelayParser.amountError },
+        onCancel: { _ in }
+    )
+    .frame(width: 440, height: 520)
+}
+
+#Preview("Dark, long note") {
+    RemindersView(
+        pending: [SampleReminders.make(String(repeating: "A very long note that wraps over several lines. ", count: 4), in: 90)],
+        fired: [],
+        onAdd: { _, _, _ in nil },
+        onCancel: { _ in }
+    )
+    .frame(width: 440, height: 520)
+    .preferredColorScheme(.dark)
+}
+#endif
