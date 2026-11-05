@@ -19,7 +19,7 @@ Requires macOS 13+ and Xcode 15+ (or the Command Line Tools).
 
 Open the `macos/` folder (or `macos/Package.swift`) in Xcode; no `.xcodeproj` is needed.
 
-**Previews.** The views live in the `CloudyMemoryUI` library so previews work. Open `RemindersView.swift`, `MenuContent.swift` or `OrbFramesGallery.swift` and show the canvas (Option-Command-Return). The views are stateless (plain values and closures), so each preview feeds them sample data: an empty list, pending and due reminders, a validation error, a long note in dark mode, the menu with and without smoke, and every orb frame of every colour. If a preview does not load, try Product > Clean Build Folder, and check that the scheme is `CloudyMemoryUI` or `CloudyMemory`.
+**Previews.** The views live in the `CloudyMemoryUI` library so previews work. Open `RemindersView.swift`, `MenuContent.swift` or `OrbFramesGallery.swift` and show the canvas (Option-Command-Return). The views are stateless (plain values and closures), so each preview feeds them sample data: an empty list, pending and due reminders, a validation error, a long note in dark mode, the menu with and without smoke, and every orb frame of every colour. **Select the `CloudyMemoryUI` scheme (destination: My Mac) before previewing.** With the `CloudyMemory` or `CloudyMemory-Package` scheme selected, Xcode tries to build the executable to host the preview and fails with *"The executable target “CloudyMemory” needs the build setting “ENABLE_DEBUG_DYLIB” set to “YES” in order to preview"*. A package opened as a folder has no build settings to change, so just switch to the library scheme. If a preview still does not load, try Product > Clean Build Folder.
 
 ## Develop
 
